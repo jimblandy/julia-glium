@@ -1,65 +1,82 @@
 #[macro_use]
 extern crate glium;
-extern crate image;
-
-mod teapot;
 
 use glium::{DisplayBuild, Surface};
-use std::f32::consts::PI;
-use std::io::Cursor;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Point {
+    position: (f32, f32)
+}
+
+implement_vertex!(Point, position);
+
+const VERTICES: [Point; 4] = [
+    Point { position: (  1.0,  1.0 ) },
+    Point { position: ( -1.0,  1.0 ) },
+    Point { position: ( -1.0, -1.0 ) },
+    Point { position: (  1.0, -1.0 ) },
+];
+
+const INDICES: [u16; 6] = [
+    0, 1, 2,
+    0, 2, 3
+];
 
 fn main() {
-    let mut builder = glium::glutin::WindowBuilder::new()
-        .with_depth_buffer(24);
+    let mut builder = glium::glutin::WindowBuilder::new();
     builder.opengl.vsync = true;
 
     let display = builder.build_glium()
         .expect("failed to build glium window");
 
-    let image = image::load(Cursor::new(&include_bytes!("/home/jimb/rust/tut-glium/src/mandel.png")[..]),
-                            image::PNG)
-        .expect("loading image")
-        .to_rgba();
-    let image_dimensions = image.dimensions();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(image.into_raw(),
-                                                                   image_dimensions);
-    let texture = glium::texture::Texture2d::new(&display, image)
-        .expect("creating texture");
-
-    let positions = glium::VertexBuffer::new(&display, &teapot::VERTICES)
+    let positions = glium::VertexBuffer::new(&display, &VERTICES)
         .expect("building positions");
-    let normals = glium::VertexBuffer::new(&display, &teapot::NORMALS)
-        .expect("building normals");
-    let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList,
-                                          &teapot::INDICES)
+    let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &INDICES)
         .expect("building indices");
 
     let vertex_shader_src = r#"
         #version 150
 
-        in vec3 position;
-        in vec3 normal;
-        out vec3 v_normal;
-        uniform mat4 matrix;
+        in vec2 position;
+        out vec2 v_position;
 
         void main() {
-            v_normal = transpose(inverse(mat3(matrix))) * normal;
-            gl_Position = matrix * vec4(position, 1.0);
+            v_position = position;
+            gl_Position = vec4(position, 0.0, 1.0);
         }
     "#;
 
     let fragment_shader_src = r#"
         #version 150
 
-        in vec3 v_normal;
+        in vec2 v_position;
+        uniform vec2 c;
         out vec4 color;
-        uniform vec3 u_light;
+
+        vec2 cmul(vec2 a, vec2 b) {
+            return vec2(a[0] * b[0] - a[1] * b[1],
+                        a[0] * b[1] + a[1] * b[0]);
+        }
 
         void main() {
-            float brightness = dot(normalize(v_normal), normalize(u_light));
-            vec3 dark_color = vec3(0.6, 0.0, 0.0);
-            vec3 regular_color = vec3(1.0, 0.0, 0.0);
-            color = vec4(mix(dark_color, regular_color, brightness), 1.0);
+            vec2 z = v_position * 2;
+
+            int it = 0;
+            const int limit = 100;
+            for (it = 0; it < limit; it++) {
+                z = cmul(z, z) + c;
+                if (dot(z, z) > 4.0)
+                    break;
+            }
+
+            float gray;
+            if (it >= limit) {
+                gray = 0.0;
+            } else {
+                gray = float(it) / float(limit);
+            }
+
+            color = vec4(gray, gray, gray, 1.0);
         }
     "#;
 
@@ -69,27 +86,15 @@ fn main() {
                                               None)
         .expect("building program");
 
+    let mut dimensions = display.get_framebuffer_dimensions();
+    let mut c = [ 0.0, 0.0f32 ];
     loop {
         let mut target = display.draw();
-        target.clear_color_and_depth((0.0, 0.0, 1.0, 1.0), 1.0);
+        target.clear_color(0.0, 0.0, 1.0, 1.0);
 
-        let matrix = [
-            [ 0.01, 0.0, 0.0, 0.0 ],
-            [ 0.0, 0.01, 0.0, 0.0 ],
-            [ 0.0, 0.0, 0.01, 0.0 ],
-            [ 0.0, 0.0, 0.0, 1.0f32 ]
-        ];
-        let light = [-1.0, 0.4, 0.9f32];
-        let params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::draw_parameters::DepthTest::IfLess,
-                write: true,
-                .. Default::default()
-            },
-            .. Default::default()
-        };
-        target.draw((&positions, &normals), &indices, &program,
-                    &uniform! { matrix: matrix, u_light: light },
+        let params = Default::default();
+        target.draw(&positions, &indices, &program,
+                    &uniform! { c: c },
                     &params)
             .expect("target.draw");
         target.finish().expect("target.finish");
@@ -97,6 +102,13 @@ fn main() {
         for ev in display.poll_events() {
             match ev {
                 glium::glutin::Event::Closed => return,
+                glium::glutin::Event::Resized(w, h) => {
+                    dimensions = (w, h);
+                }
+                glium::glutin::Event::MouseMoved(x,y) => {
+                    c[0] = -2.0 + (x as f32 / dimensions.0 as f32) * 4.0;
+                    c[1] =  2.0 - (y as f32 / dimensions.1 as f32) * 4.0;
+                },
                 _ => ()
             }
         }
