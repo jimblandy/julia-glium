@@ -1,0 +1,10 @@
+[package]
+name = "tut-glium"
+version = "0.1.0"
+authors = ["Jim Blandy <jimb@red-bean.com>"]
+
+[dependencies.glium]
+git = "file:///home/jimb/rust/glium"
+
+[dependencies.image]
+git = "file:///home/jimb/rust/image"
