@@ -37,11 +37,12 @@ fn main() {
     let vertex_shader_src = r#"
         #version 150
 
+        uniform vec2 screen_to_complex;
         in vec2 position;
-        out vec2 v_position;
+        out vec2 fragment_z;
 
         void main() {
-            v_position = position;
+            fragment_z = screen_to_complex * position;
             gl_Position = vec4(position, 0.0, 1.0);
         }
     "#;
@@ -49,8 +50,8 @@ fn main() {
     let fragment_shader_src = r#"
         #version 150
 
-        in vec2 v_position;
         uniform vec2 c;
+        in vec2 fragment_z;
         out vec4 color;
 
         vec2 cmul(vec2 a, vec2 b) {
@@ -59,10 +60,9 @@ fn main() {
         }
 
         void main() {
-            vec2 z = v_position * 2;
-
+            vec2 z = fragment_z;
             int it = 0;
-            const int limit = 100;
+            const int limit = 150;
             for (it = 0; it < limit; it++) {
                 z = cmul(z, z) + c;
                 if (dot(z, z) > 4.0)
@@ -75,6 +75,9 @@ fn main() {
             } else {
                 gray = float(it) / float(limit);
             }
+            gray = 1.0 - gray;
+            gray = gray * gray * gray;
+            gray = 1.0 - gray;
 
             color = vec4(gray, gray, gray, 1.0);
         }
@@ -87,14 +90,22 @@ fn main() {
         .expect("building program");
 
     let mut dimensions = display.get_framebuffer_dimensions();
+    let mut aspect = dimensions.0 as f32 / dimensions.1 as f32;
     let mut c = [ 0.0, 0.0f32 ];
+
     loop {
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
         let params = Default::default();
         target.draw(&positions, &indices, &program,
-                    &uniform! { c: c },
+                    &uniform! {
+                        screen_to_complex: if aspect < 1.0 {
+                            [ 2.0, 2.0 / aspect ]
+                        } else {
+                            [ 2.0 * aspect, 2.0 ]
+                        },
+                        c: c },
                     &params)
             .expect("target.draw");
         target.finish().expect("target.finish");
@@ -104,10 +115,20 @@ fn main() {
                 glium::glutin::Event::Closed => return,
                 glium::glutin::Event::Resized(w, h) => {
                     dimensions = (w, h);
+                    aspect = dimensions.0 as f32 / dimensions.1 as f32;
                 }
                 glium::glutin::Event::MouseMoved(x,y) => {
-                    c[0] = -2.0 + (x as f32 / dimensions.0 as f32) * 4.0;
-                    c[1] =  2.0 - (y as f32 / dimensions.1 as f32) * 4.0;
+                    if dimensions.0 > dimensions.1 {
+                        // Window is wider than it is high. Horizontally center
+                        // the circle of radius two whose center is the origin.
+                        c[0] = (x as f32 / dimensions.0 as f32 - 0.5) * 2.0 * aspect;
+                        c[1] = (y as f32 / dimensions.1 as f32 - 0.5) * 2.0;
+                    } else {
+                        // Window is higher than it is wide. Vertically center
+                        // the circle of radius two whose center is the origin.
+                        c[0] = (x as f32 / dimensions.0 as f32 - 0.5) * 2.0;
+                        c[1] = (y as f32 / dimensions.1 as f32 - 0.5) * 2.0 / aspect;
+                    }
                 },
                 _ => ()
             }
