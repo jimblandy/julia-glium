@@ -77,7 +77,7 @@ fn main() {
             // Map the iteration count to value between 0 and 1.
             float gray;
             if (it >= limit) {
-                gray = 0.0;
+                gray = 1.0;
             } else {
                 gray = float(it) / float(limit);
             }
@@ -86,7 +86,6 @@ fn main() {
             // and revert.
             gray = 1.0 - gray;
             gray = gray * gray * gray;
-            gray = 1.0 - gray;
 
             color = vec4(gray, gray, gray, 1.0);
         }
