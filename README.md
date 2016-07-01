@@ -1,4 +1,4 @@
-# `julia-glium`: A GPU-based Julia set plotter in Rust
+# julia-glium: A GPU-based Julia set plotter in Rust
 
 This program plots the Julia set for the current mouse location, using the GPU
 (or, an OpenGL fragment shader, at least) for the per-pixel calculations. It's
