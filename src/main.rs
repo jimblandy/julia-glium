@@ -10,6 +10,7 @@ pub struct Point {
 
 implement_vertex!(Point, position);
 
+/// The four corners of OpenGL screen space.
 const VERTICES: [Point; 4] = [
     Point { position: (  1.0,  1.0 ) },
     Point { position: ( -1.0,  1.0 ) },
@@ -17,6 +18,9 @@ const VERTICES: [Point; 4] = [
     Point { position: (  1.0, -1.0 ) },
 ];
 
+/// Two triangles arranged as a rectangle covering OpenGL screen space.
+/// All the real work happens in the fragment shader, so we just want to
+/// run the shader on every pixel.
 const INDICES: [u16; 6] = [
     0, 1, 2,
     0, 2, 3
@@ -54,6 +58,7 @@ fn main() {
         in vec2 fragment_z;
         out vec4 color;
 
+        // Complex multiplication.
         vec2 cmul(vec2 a, vec2 b) {
             return vec2(a[0] * b[0] - a[1] * b[1],
                         a[0] * b[1] + a[1] * b[0]);
@@ -69,12 +74,16 @@ fn main() {
                     break;
             }
 
+            // Map the iteration count to value between 0 and 1.
             float gray;
             if (it >= limit) {
                 gray = 0.0;
             } else {
                 gray = float(it) / float(limit);
             }
+
+            // Brighten things up a bit: invert, cube to push it towards zero,
+            // and revert.
             gray = 1.0 - gray;
             gray = gray * gray * gray;
             gray = 1.0 - gray;
@@ -118,14 +127,14 @@ fn main() {
                     aspect = dimensions.0 as f32 / dimensions.1 as f32;
                 }
                 glium::glutin::Event::MouseMoved(x,y) => {
+                    // Map pixels to complex coordinates, keeping the circle of radius
+                    // two centered at the origin in the middle of the image.
                     if dimensions.0 > dimensions.1 {
-                        // Window is wider than it is high. Horizontally center
-                        // the circle of radius two whose center is the origin.
+                        // Window is wider than it is high.
                         c[0] = (x as f32 / dimensions.0 as f32 - 0.5) * 2.0 * aspect;
                         c[1] = (y as f32 / dimensions.1 as f32 - 0.5) * 2.0;
                     } else {
-                        // Window is higher than it is wide. Vertically center
-                        // the circle of radius two whose center is the origin.
+                        // Window is higher than it is wide.
                         c[0] = (x as f32 / dimensions.0 as f32 - 0.5) * 2.0;
                         c[1] = (y as f32 / dimensions.1 as f32 - 0.5) * 2.0 / aspect;
                     }
