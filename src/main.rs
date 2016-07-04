@@ -70,6 +70,7 @@ fn main() {
             const int limit = 150;
             for (it = 0; it < limit; it++) {
                 z = cmul(z, z) + c;
+                z[0] += dot(z, z);
                 if (dot(z, z) > 4.0)
                     break;
             }
