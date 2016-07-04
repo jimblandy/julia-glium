@@ -70,6 +70,7 @@ fn main() {
             const int limit = 150;
             for (it = 0; it < limit; it++) {
                 z = cmul(z, z) + c;
+                z[0] += dot(z, c);
                 if (dot(z, z) > 4.0)
                     break;
             }
@@ -85,7 +86,7 @@ fn main() {
             // Brighten things up a bit: invert, cube to push it towards zero,
             // and revert.
             gray = 1.0 - gray;
-            gray = gray * gray * gray;
+            gray = gray * gray;
 
             color = vec4(gray, gray, gray, 1.0);
         }
