@@ -38,62 +38,9 @@ fn main() {
     let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &INDICES)
         .expect("building indices");
 
-    let vertex_shader_src = r#"
-        #version 150
-
-        uniform vec2 screen_to_complex;
-        in vec2 position;
-        out vec2 fragment_z;
-
-        void main() {
-            fragment_z = screen_to_complex * position;
-            gl_Position = vec4(position, 0.0, 1.0);
-        }
-    "#;
-
-    let fragment_shader_src = r#"
-        #version 150
-
-        uniform vec2 c;
-        in vec2 fragment_z;
-        out vec4 color;
-
-        // Complex multiplication.
-        vec2 cmul(vec2 a, vec2 b) {
-            return vec2(a[0] * b[0] - a[1] * b[1],
-                        a[0] * b[1] + a[1] * b[0]);
-        }
-
-        void main() {
-            vec2 z = fragment_z;
-            int it = 0;
-            const int limit = 150;
-            for (it = 0; it < limit; it++) {
-                z = cmul(z, z) + c;
-                if (dot(z, z) > 4.0)
-                    break;
-            }
-
-            // Map the iteration count to value between 0 and 1.
-            float gray;
-            if (it >= limit) {
-                gray = 1.0;
-            } else {
-                gray = float(it) / float(limit);
-            }
-
-            // Brighten things up a bit: invert, cube to push it towards zero,
-            // and revert.
-            gray = 1.0 - gray;
-            gray = gray * gray * gray;
-
-            color = vec4(gray, gray, gray, 1.0);
-        }
-    "#;
-
     let program = glium::Program::from_source(&display,
-                                              &vertex_shader_src,
-                                              &fragment_shader_src,
+                                              &include_str!("vertex.glsl"),
+                                              &include_str!("fragment.glsl"),
                                               None)
         .expect("building program");
 
