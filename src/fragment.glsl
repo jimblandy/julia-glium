@@ -10,14 +10,8 @@ vec2 cmul(vec2 a, vec2 b) {
                 a[0] * b[1] + a[1] * b[0]);
 }
 
-// Complex reciprocal.
-vec2 cinv(vec2 a) {
-    float norm = dot(a, a);
-    return vec2(a[0] / norm, -a[1] / norm);
-}
-
 void main() {
-    vec2 z = cinv(fragment_z);
+    vec2 z = fragment_z;
     int it = 0;
     const int limit = 100;
     for (it = 0; it < limit; it++) {
