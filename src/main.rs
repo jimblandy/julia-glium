@@ -39,8 +39,8 @@ fn main() {
         .expect("building indices");
 
     let program = glium::Program::from_source(&display,
-                                              &include_str!("vertex.glsl"),
-                                              &include_str!("fragment.glsl"),
+                                              &include_str!("julia.vert"),
+                                              &include_str!("julia.frag"),
                                               None)
         .expect("building program");
 
