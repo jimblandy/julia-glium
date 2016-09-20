@@ -1,7 +1,12 @@
 #[macro_use]
 extern crate glium;
 
-use glium::{DisplayBuild, Surface};
+use std::io;
+use std::io::prelude::*;
+use std::fs::File;
+
+use glium::{DisplayBuild, Surface, Program};
+use glium::backend::Facade;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point {
@@ -38,17 +43,17 @@ fn main() {
     let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &INDICES)
         .expect("building indices");
 
-    let program = glium::Program::from_source(&display,
-                                              &include_str!("julia.vert"),
-                                              &include_str!("julia.frag"),
-                                              None)
-        .expect("building program");
-
     let mut dimensions = display.get_framebuffer_dimensions();
     let mut aspect = dimensions.0 as f32 / dimensions.1 as f32;
     let mut c = [ 0.0, 0.0f32 ];
 
+    let mut program = load_shader_program(&display).unwrap();
+
     loop {
+        if let Ok(p) = load_shader_program(&display) {
+            program = p;
+        }
+
         let mut target = display.draw();
         target.clear_color(0.0, 0.0, 1.0, 1.0);
 
@@ -88,5 +93,31 @@ fn main() {
                 _ => ()
             }
         }
+    }
+}
+
+#[derive(Debug)]
+struct ShaderError;
+
+impl From<std::io::Error> for ShaderError {
+    fn from(e: io::Error) -> ShaderError {
+        ShaderError
+    }
+}
+
+fn read_file(path: &str) -> io::Result<String> {
+    let mut s = String::new();
+    let mut f = try!(File::open(path));
+    try!(f.read_to_string(&mut s));
+    Ok(s)
+}
+
+fn load_shader_program<F: Facade>(display: &F) -> Result<Program, ShaderError> {
+    let vert_shader = try!(read_file("src/julia.vert"));
+    let frag_shader = try!(read_file("src/julia.frag"));
+    if let Ok(p) = glium::Program::from_source(display, &vert_shader, &frag_shader, None) {
+        Ok(p)
+    } else {
+        Err(ShaderError)
     }
 }
