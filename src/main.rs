@@ -43,11 +43,15 @@ fn main() {
     let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &INDICES)
         .expect("building indices");
 
+    let mut program = Program::from_source(&display,
+                                           &include_str!("julia.vert"),
+                                           &include_str!("julia.frag"),
+                                           None)
+        .expect("building program");
+
     let mut dimensions = display.get_framebuffer_dimensions();
     let mut aspect = dimensions.0 as f32 / dimensions.1 as f32;
     let mut c = [ 0.0, 0.0f32 ];
-
-    let mut program = load_shader_program(&display).unwrap();
 
     loop {
         if let Ok(p) = load_shader_program(&display) {
