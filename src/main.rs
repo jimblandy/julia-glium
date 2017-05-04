@@ -104,7 +104,7 @@ fn main() {
 struct ShaderError;
 
 impl From<std::io::Error> for ShaderError {
-    fn from(e: io::Error) -> ShaderError {
+    fn from(_e: io::Error) -> ShaderError {
         ShaderError
     }
 }
