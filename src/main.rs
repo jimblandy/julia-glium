@@ -5,8 +5,9 @@ use std::io;
 use std::io::prelude::*;
 use std::fs::File;
 
-use glium::{DisplayBuild, Surface, Program};
+use glium::{Surface, Program};
 use glium::backend::Facade;
+use glium::glutin::{Event, WindowEvent};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point {
@@ -32,10 +33,11 @@ const INDICES: [u16; 6] = [
 ];
 
 fn main() {
-    let mut builder = glium::glutin::WindowBuilder::new();
-    builder.opengl.vsync = true;
-
-    let display = builder.build_glium()
+    let mut event_loop = glium::glutin::EventsLoop::new();
+    let window = glium::glutin::WindowBuilder::new()
+        .with_title("Julia");
+    let context = glium::glutin::ContextBuilder::new();
+    let display = glium::Display::new(window, context, &event_loop)
         .expect("failed to build glium window");
 
     let positions = glium::VertexBuffer::new(&display, &VERTICES)
@@ -74,14 +76,21 @@ fn main() {
             .expect("target.draw");
         target.finish().expect("target.finish");
 
-        for ev in display.poll_events() {
+        let mut should_return = false;
+        event_loop.poll_events(|ev| {
             match ev {
-                glium::glutin::Event::Closed => return,
-                glium::glutin::Event::Resized(w, h) => {
+                Event::WindowEvent { event: WindowEvent::Closed, .. } => {
+                    should_return = true;
+                }
+                Event::WindowEvent { event: WindowEvent::Resized(w, h), .. } => {
                     dimensions = (w, h);
                     aspect = dimensions.0 as f32 / dimensions.1 as f32;
                 }
-                glium::glutin::Event::MouseMoved(x,y) => {
+                Event::WindowEvent {
+                    event: WindowEvent::MouseMoved {
+                        position: (x,y), ..
+                    }, ..
+                } => {
                     // Map pixels to complex coordinates, keeping the circle of radius
                     // two centered at the origin in the middle of the image.
                     if dimensions.0 > dimensions.1 {
@@ -96,6 +105,10 @@ fn main() {
                 },
                 _ => ()
             }
+        });
+
+        if should_return {
+            return;
         }
     }
 }
