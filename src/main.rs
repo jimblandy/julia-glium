@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate glium;
+extern crate glium_text_rusttype as glium_text;
+extern crate glutin;
+extern crate winit;
 
 use std::io;
 use std::io::prelude::*;
@@ -33,12 +36,21 @@ const INDICES: [u16; 6] = [
 ];
 
 fn main() {
-    let mut event_loop = glium::glutin::EventsLoop::new();
-    let window = glium::glutin::WindowBuilder::new()
+    let mut event_loop = winit::EventsLoop::new();
+    let window = winit::WindowBuilder::new()
         .with_title("Julia");
-    let context = glium::glutin::ContextBuilder::new();
+    let context = glutin::ContextBuilder::new();
     let display = glium::Display::new(window, context, &event_loop)
         .expect("failed to build glium window");
+
+    /*
+    let system = glium_text::TextSystem::new(&display);
+    let fontfile = File::open("/home/jimb/rust/julia-glium/src/Inconsolata-Regular.ttf")
+        .expect("error opening Inconsolata.otf file");
+    let font = glium_text::FontTexture::new(&display, fontfile, 24,
+                                            glium_text::FontTexture::ascii_character_list())
+        .expect("error creating font texture");
+     */
 
     let positions = glium::VertexBuffer::new(&display, &VERTICES)
         .expect("building positions");
@@ -73,7 +85,19 @@ fn main() {
                         },
                         c: c },
                     &params)
-            .expect("target.draw");
+            .expect("draw Julia set");
+
+        /*
+        let text = glium_text::TextDisplay::new(&system, &font,
+                                                &format!("{}+i{}", c[0], c[1]));
+        let text_matrix = [[1.0, 0.0, 0.0, 0.0],
+                           [0.0, 1.0, 0.0, 0.0],
+                           [0.0, 0.0, 1.0, 0.0],
+                           [0.0, 0.0, 0.0, 1.0]];
+        glium_text::draw(&text, &system, &mut target, text_matrix, (0.0, 0.0, 0.0, 1.0))
+            .expect("draw c text");
+        */
+
         target.finish().expect("target.finish");
 
         let mut should_return = false;
@@ -87,7 +111,7 @@ fn main() {
                     aspect = dimensions.0 as f32 / dimensions.1 as f32;
                 }
                 Event::WindowEvent {
-                    event: WindowEvent::MouseMoved {
+                    event: WindowEvent::CursorMoved {
                         position: (x,y), ..
                     }, ..
                 } => {
